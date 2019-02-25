@@ -1,0 +1,7 @@
+.vscode
+demo/
+__pycache__
+build
+dist
+*.spec
+*.ini
