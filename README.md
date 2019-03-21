@@ -18,7 +18,36 @@
 2019:1234:ABCD:FFFF::/64
 ```
 
+**实现思路**
+
+```python
+from IPy import IP, IPSet
+
+ip = IP('2019:1234:ABCD::/48')
+suffix = '/56'
+
+def ip_split(ip, suffix):
+    ip1 = IP(ip.strNormal(0) + suffix) # 2019:1234:ABCD::/64
+    result = [ip1]
+    ip -= ip1
+    for i in ip:
+        if i.strNetmask() != suffix: # 掩码与预期的不一致
+            result.extend(ip_split(i, suffix))
+        else:
+            result.append(i)
+    return result
+
+result = ip_split(ip, suffix)
+for i in result:
+    print(i)
+index_mark = int(suffix[1:]) - int(ip.strNetmask()[1:])
+total = 2**index_mark
+print('共输出 {} 行。（2^{}）'.format(total, index_mark))
+```
+
 不建议拆分后的条目过多，会导致分割时间过长甚至卡死。
+
+
 
 **2.给出 IP 段 和想要拆分出来的单个 IP，自动将单个 IP 取出，余下 IP 尽可能合并**
 
@@ -77,7 +106,26 @@
 共 81 行
 ```
 
+**实现思路**
+
+```python
+from IPy import IP, IPSet
+
+ip = IP('2019:1234:ABCD::/48')
+ip_one = IP('2019:1234:ABCD:0:10:E00::1/128')
+ips = ip - ip_one
+
+print(ip_one)
+count = 1
+for i in ips:
+    count += 1
+    print(i)
+print('共输出 {} 行。'.format(count))
+```
+
 拆分后，生成的 IP 段 所包含的范围，与拆分前所包含的范围一致。
 
 本工具用于解决 IPv6 地址段从未备案时合并为单条`/48`的状态，到启用后使用某一个`/128`或某一小段`/127`时，拆分地址段较麻烦的痛点。
+
+
 
