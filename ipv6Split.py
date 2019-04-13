@@ -1,58 +1,107 @@
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-from IPy import IP
-import re
+from IPy import IP, IPSet
+from plumbum import cli
+
+ipv6_reg = r'^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$'
 
 
-class ipv6Split(IP):
-    """
-    ipv6 分割
-    """
+class Ipv6Split(cli.Application):
+    '''用于 IPv6 地址拆分  --Xianda'''
 
-    def __init__(self, ipv6, mask=48):
-        """
-        初始化 + 校验
-        """
-        array = ipv6.split('/')
-        if len(array) == 1:
-            self.mask = mask
-        elif array[1].isdigit():
-            self.mask = int(array[1])
-            if 20 <= self.mask <= 128:
-                if self.isValidateIpv6(array[0]):
-                    self.ipv6 = array[0]
-                else:
-                    print('The ipv6 is illegal! Now will quit...')
-                    os.system('pause')
-                    exit()
+    PROGNAME = 'ipv6Split'
+    PROGNAME = __file__
+    VERSION = '0.1'
+    outputs = []
+
+    # ip = '2019:1234:ABCD::/48'
+    # suffix = 56
+
+    def usage(self):
+        '''显示使用样例'''
+        print(self.PROGNAME,)
+        print('=================\n')
+        print('功能1：' + self.split.__doc__)
+        print('功能2：' + self.pick_up.__doc__)
+        print('\n用例：（使用 -h 查看更多帮助）\n')
+        print(self.PROGNAME, '-i 2019:1234:abcd::/48 -s 56 --split')
+        print(self.PROGNAME,
+              '-i 2019:1234:abcd::/48 -o 2019:1234:abcd::/127 --pick-up\n')
+        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+
+    @cli.switch('-h')
+    def help(self):
+        '''显示帮助和使用样例'''
+        self.usage()
+        super().help()
+
+    def split_recursion(self, ip, suffix):
+        '''递归法'''
+        ip1 = IP(ip.strNormal(0) + suffix)  # 2019:1234:ABCD::/64
+        result = [ip1]
+        ip -= ip1
+        for i in ip:
+            if i.strNetmask() != suffix:  # 掩码与预期的不一致
+                result.extend(self.split_recursion(i, suffix))
             else:
-                print('The mask is illegal! Now will quit...')
-                os.system('pause')
-                exit()
-        IP.__init__(self, ipv6, make_net=True)
+                result.append(i)
+        return result
 
-    def isValidateIpv6(self, ipv6):
-        """
-        判断 ipv6 格式是否正确
-        """
-        ipv6
-        matchobj = re.match(r'^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$', ipv6)
-        if matchobj:
-            return True
+    def __split(self):
+        total = 2**self.index_mark
+        result = self.split_recursion(self.ip, self.suffix)
+        for i in result:
+            self.outputs.append(i.strCompressed())
+        print(self.outputs)
+        print('拆分后个数 {} 。（个数=2的{}次幂）'.format(total, self.index_mark))
+
+    def __pick_up(self):
+        result = self.ip - self.output_ip
+        self.outputs.append(self.output_ip)
+        for i in result:
+            self.outputs.append(i.strCompressed())
+        print(self.outputs)
+        print('拆分后个数 {} 。（个数=掩码相减再+1）'.format(len(self.outputs)))
+
+    @cli.switch(names='-i', argtype=str)
+    def input(self, input_ip):
+        '''原 IPv6 地址段'''
+        self.ip = IP(input_ip)
+
+    @cli.switch('--split', requires=['-s'], excludes=['-o'])
+    def split(self):
+        '''将 IPv6 地址拆分成掩码相同的 IPv6 地址段'''
+        self.method = self.__split
+
+    @cli.switch('--pick-up', requires=['-o'], excludes=['-s'])
+    def pick_up(self):
+        '''将指定的 IPv6 地址（段）提取出来'''
+        self.method = self.__pick_up
+
+    @cli.switch('-s', int, group=split.__doc__)
+    def new_netmask(self, suffix):
+        '''要拆分成的掩码'''
+        self.index_mark = suffix - self.ip.prefixlen()
+        if(self.index_mark) < 0:
+            print('错误： 拆分后的掩码大于原IPv6段的掩码！')
+            return
+        self.suffix = '/' + str(suffix)
+
+    @cli.switch('-o', str, group=pick_up.__doc__)
+    def output(self, output_ip):
+        '''要提取的 IPv6 地址（段）'''
+        self.output_ip = IP(output_ip)
+
+    def main(self):
+        if hasattr(self, 'method'):
+            self.method()
         else:
-            return False
-
-    def splitIn2(self):
-        """
-        将 ipv6 地址段平均拆分成 2 个地址段
-        """
-        newPerfixlen = self.prefixlen()+1
-        return [IP(x).make_net(newPerfixlen).strCompressed() for x in self.strNormal(3).split('-')]
+            print('\n*********************************************')
+            print('\t****欢迎使用 Xianda 小工具****')
+            print('*********************************************\n')
+            self.usage()
 
 
 if __name__ == '__main__':
-    ipv6str = '2019:1234:ABCD:4:5::7/48'
-    print('input: '+ipv6str)
-    ip = ipv6Split(ipv6str)
-    print(ip.splitIn2())
+    Ipv6Split.run()
