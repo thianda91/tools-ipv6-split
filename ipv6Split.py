@@ -3,6 +3,7 @@
 
 from IPy import IP, IPSet
 from plumbum import cli
+from datetime import datetime
 
 ipv6_reg = r'^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$'
 
@@ -11,12 +12,15 @@ class Ipv6Split(cli.Application):
     '''用于 IPv6 地址拆分  --Xianda'''
 
     PROGNAME = 'ipv6Split'
-    PROGNAME = __file__
-    VERSION = '0.1'
+    # PROGNAME = __file__
+    VERSION = '0.2'
     outputs = []
 
     # ip = '2019:1234:ABCD::/48'
     # suffix = 56
+
+    def now(self):
+        return datetime.strftime(datetime.now(), '%Y-%m-%d.%H%M%S')
 
     def usage(self):
         '''显示使用样例'''
@@ -53,7 +57,7 @@ class Ipv6Split(cli.Application):
         result = self.split_recursion(self.ip, self.suffix)
         for i in result:
             self.outputs.append(i.strCompressed())
-        print(self.outputs)
+        self.__out()
         print('拆分后个数 {} 。（个数=2的{}次幂）'.format(total, self.index_mark))
 
     def __pick_up(self):
@@ -61,8 +65,16 @@ class Ipv6Split(cli.Application):
         self.outputs.append(self.output_ip)
         for i in result:
             self.outputs.append(i.strCompressed())
-        print(self.outputs)
+        self.__out()
         print('拆分后个数 {} 。（个数=掩码相减再+1）'.format(len(self.outputs)))
+
+    def __out(self):
+        '''结果输出'''
+        # print(self.outputs)
+        fileName = 'result-{}.txt'.format(self.now())
+        with open(fileName,'w') as f:
+            f.write('\n'.join(self.outputs))
+        print('\n\n\t输出结果请在同目录下查看：{}\n'.format(fileName))
 
     @cli.switch(names='-i', argtype=str)
     def input(self, input_ip):
