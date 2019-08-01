@@ -13,7 +13,7 @@ class Ipv6Split(cli.Application):
 
     PROGNAME = 'ipv6Split'
     # PROGNAME = __file__
-    VERSION = '0.2'
+    VERSION = '0.3'
     outputs = []
 
     # ip = '2019:1234:ABCD::/48'
@@ -25,7 +25,7 @@ class Ipv6Split(cli.Application):
     def usage(self):
         '''显示使用样例'''
         print(self.PROGNAME,)
-        print('=================\n')
+        print('================= verison: v{}\n'.format(self.VERSION))
         print('功能1：' + self.split.__doc__)
         print('功能2：' + self.pick_up.__doc__)
         print('\n用例：（使用 -h 查看更多帮助）\n')
@@ -37,7 +37,7 @@ class Ipv6Split(cli.Application):
     @cli.switch('-h')
     def help(self):
         '''显示帮助和使用样例'''
-        self.usage()
+        # self.usage()
         super().help()
 
     def split_recursion(self, ip, suffix):
@@ -62,10 +62,11 @@ class Ipv6Split(cli.Application):
 
     def __pick_up(self):
         result = self.ip - self.output_ip
-        self.outputs.append(self.output_ip)
+        self.outputs.append(self.output_ip.strCompressed())
         for i in result:
             self.outputs.append(i.strCompressed())
         self.__out()
+        # print(self.outputs[0].strCompressed())
         print('拆分后个数 {} 。（个数=掩码相减再+1）'.format(len(self.outputs)))
 
     def __out(self):
@@ -74,7 +75,8 @@ class Ipv6Split(cli.Application):
         fileName = 'result-{}.txt'.format(self.now())
         with open(fileName,'w') as f:
             f.write('\n'.join(self.outputs))
-        print('\n\n\t输出结果请在同目录下查看：{}\n'.format(fileName))
+        print('\n\n**输出结果的文件名基于时间生成，不会覆盖旧文件**')
+        print('文件保存在小工具运行目录：\n\t{}\n'.format(fileName))
 
     @cli.switch(names='-i', argtype=str)
     def input(self, input_ip):
@@ -96,7 +98,7 @@ class Ipv6Split(cli.Application):
         '''要拆分成的掩码'''
         self.index_mark = suffix - self.ip.prefixlen()
         if(self.index_mark) < 0:
-            print('错误： 拆分后的掩码大于原IPv6段的掩码！')
+            print('错误： 拆分后的掩码大于原IP段的掩码！')
             return
         self.suffix = '/' + str(suffix)
 
@@ -116,4 +118,8 @@ class Ipv6Split(cli.Application):
 
 
 if __name__ == '__main__':
-    Ipv6Split.run()
+    try:
+        Ipv6Split.run()
+    except Exception as e:
+        print('运行出错了。多数情况是IP地址输入有误哦~报错信息如下：')
+        print(e)
