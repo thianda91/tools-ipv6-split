@@ -12,10 +12,12 @@ class Ipv6Split(cli.Application):
     '''用于 IPv6 地址拆分  --Xianda'''
 
     PROGNAME = 'ipv6Split'
+    # PROGNAME = colors.green | 'ipv6Split'
     # PROGNAME = __file__
-    VERSION = '0.3'
+    VERSION = '0.4'
+    # COLOR_GROUPS = {"Switches" : colors.bold & colors.yellow}
     outputs = []
-
+    echo_to_cli = False   # 默认为输入到文件，而不是直接在命令行输入。
     # ip = '2019:1234:ABCD::/48'
     # suffix = 56
 
@@ -71,12 +73,15 @@ class Ipv6Split(cli.Application):
 
     def __out(self):
         '''结果输出'''
-        # print(self.outputs)
-        fileName = 'result-{}.txt'.format(self.now())
-        with open(fileName,'w') as f:
-            f.write('\n'.join(self.outputs))
-        print('\n\n**输出结果的文件名基于时间生成，不会覆盖旧文件**')
-        print('文件保存在小工具运行目录：\n\t{}\n'.format(fileName))
+        _result = '\n'.join(self.outputs)
+        if self.echo_to_cli:
+            print(_result)
+        else:
+            fileName = 'result-{}.txt'.format(self.now())
+            with open(fileName,'w') as f:
+                f.write(_result)
+            print('\n\n**输出结果的文件名基于时间生成，不会覆盖旧文件**')
+            print('文件保存在小工具运行目录：\n\t{}\n'.format(fileName))
 
     @cli.switch(names='-i', argtype=str)
     def input(self, input_ip):
@@ -106,6 +111,11 @@ class Ipv6Split(cli.Application):
     def output(self, output_ip):
         '''要提取的 IPv6 地址（段）'''
         self.output_ip = IP(output_ip)
+
+    @cli.switch('--cli')
+    def echo_through_cli(self):
+        '''直接在命令行输入结果'''
+        self.echo_to_cli = True
 
     def main(self):
         if hasattr(self, 'method'):
