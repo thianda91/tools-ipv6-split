@@ -1,8 +1,10 @@
-## IPv6 地址拆分工具
+# IPv6 地址拆分工具
 
-[更新历史](CHANGELOG.md)  [![HitCount](http://hits.dwyl.io/thianda/xda-tools/ipv6-split.svg)](http://hits.dwyl.io/thianda/xda-tools/ipv6-split) 
+## 功能介绍
 
-本工具拟实现以下两个功能：
+本工具实现以下三个功能。
+
+### 功能 1
 
 **1. 给出 IP 段和想要拆分成的 IP 段长度，自动拆分为指定的掩码长度的 IP 段**
 
@@ -18,38 +20,11 @@
 2019:1234:ABCD:FFFF::/64
 ```
 
-**实现思路**
-
-```python
-from IPy import IP, IPSet
-
-ip = IP('2019:1234:ABCD::/48')
-suffix = '/56'
-
-def ip_split(ip, suffix):
-    ip1 = IP(ip.strNormal(0) + suffix) # 2019:1234:ABCD::/64
-    result = [ip1]
-    ip -= ip1
-    for i in ip:
-        if i.strNetmask() != suffix: # 掩码与预期的不一致
-            result.extend(ip_split(i, suffix))
-        else:
-            result.append(i)
-    return result
-
-result = ip_split(ip, suffix)
-for i in result:
-    print(i)
-index_mark = int(suffix[1:]) - int(ip.strNetmask()[1:])
-total = 2**index_mark
-print('共输出 {} 行。（2^{}）'.format(total, index_mark))
-```
-
 不建议拆分后的条目过多，会导致分割时间过长甚至卡死。
 
+### 功能 2
 
-
-**2.给出 IP 段 和想要拆分出来的单个 IP，自动将单个 IP 取出，余下 IP 尽可能合并**
+**2. 给出 IP 段 和想要拆分出来的单个 IP，自动将单个 IP 取出，余下 IP 尽可能合并**
 
 例子 1：
 
@@ -106,26 +81,80 @@ print('共输出 {} 行。（2^{}）'.format(total, index_mark))
 共 81 行
 ```
 
-**实现思路**
-
-```python
-from IPy import IP, IPSet
-
-ip = IP('2019:1234:ABCD::/48')
-ip_one = IP('2019:1234:ABCD:0:10:E00::1/128')
-ips = ip - ip_one
-
-print(ip_one)
-count = 1
-for i in ips:
-    count += 1
-    print(i)
-print('共输出 {} 行。'.format(count))
-```
-
 拆分后，生成的 IP 段 所包含的范围，与拆分前所包含的范围一致。
 
-本工具用于解决 IPv6 地址段从未备案时合并为单条`/48`的状态，到启用后使用某一个`/128`或某一小段`/127`时，拆分地址段较麻烦的痛点。
+### 功能 3
 
+**3. 给出若干 IP/掩码 格式(可由功能1/功能2生成)， 输出同数量的 起始IP-终止IP 格式。**
 
+例子：
+
+```sh
+已知文本`input.txt`，内容如下：
+2019:1234:ABCD::/128
+2019:1234:ABCD::1/128
+2019:1234:ABCD::2/127
+2019:1234:ABCD::4/126
+2019:1234:ABCD::8/125
+需要生成：
+2019:1234:ABCD::-2019:1234:ABCD::
+2019:1234:ABCD::1-2019:1234:ABCD::1
+2019:1234:ABCD::2-2019:1234:ABCD::3
+2019:1234:ABCD::4-2019:1234:ABCD::7
+2019:1234:ABCD::8-2019:1234:ABCD::15
+```
+
+## 使用方法
+
+以下假设小工具的文件名为`ipv6Split.exe`。小工具需要在命令行模式运行。
+
+1. 在小工具的文件夹空白处，按住`shift`键，右键选择“在此处打开命令窗口”。
+2. 输入`ipv6Split`，**直接按回车**可查看简要使用帮助。
+3. 执行`ipv6Split -h`，查看**详细帮助**。
+
+可根据使用帮助输入对应的参数，拆分后的结果默认保存在同目录下（基于时间命名的 `txt` 文件）。
+
+### 参数解释 1
+
+```sh
+ipv6Split -i 2019:1234:abcd::/48 -s 56 --split
+
+# --split ：将 IPv6 地址拆分成掩码相同的 IPv6 地址段
+# -i ：要拆分的 ipv6 是 2019:1234:abcd::/48
+# -s ：拆分后的掩码是 56
+
+最终会生成若干个掩码为 /56 的 ipv6 地址段，其包含的范围与原 /48 的地址段相同。
+```
+
+### 参数解释 2
+
+```sh
+ipv6Split -i 2019:1234:abcd::/48 -o 2019:1234:abcd::/127 --pick-up
+
+# --pick-up ：将指定的 IPv6 地址/段提取出来
+# -i ：要拆分的 ipv6 是 2019:1234:abcd::/48
+# -o ：要拆分出来的是 2019:1234:abcd::/127
+
+最终结果会包含 2019:1234:abcd::/127，且包含的范围与原 /48 的地址段相同。不会造成遗漏。
+```
+
+### 参数解释 3
+
+```sh
+ipv6Split -f input.txt --trans
+
+# --trans ：将若干IP/掩码格式转换成:起始IP,终止IP
+# -f ：要转换的文件名(可由功能 1 或功能 2 生成)
+
+最终结果会是若干 起始IP,终止IP 格式。
+#> （分隔符为 `\t`，即制表符。复制粘贴到 excel 文件会自动分为俩列。）
+```
+
+### 其他参数
+
+```sh
+--cli ： 运行命令中添加`--cli`，结果会直接在命令行输出，而不是默认的输出到文件。
+# 比如：
+ipv6Split -i 2019:1234:abcd::/48 -s 56 --split --cli
+```
 
