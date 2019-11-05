@@ -14,7 +14,7 @@ class Ipv6Split(cli.Application):
     PROGNAME = 'ipv6Split'
     # PROGNAME = colors.green | 'ipv6Split'
     # PROGNAME = __file__
-    VERSION = '0.5'
+    VERSION = '0.6.1'
     # COLOR_GROUPS = {"Switches" : colors.bold & colors.yellow}
     outputs = []
     echo_to_cli = False   # 默认为输入到文件，而不是直接在命令行输入。
@@ -35,7 +35,7 @@ class Ipv6Split(cli.Application):
         print(self.PROGNAME, '-i 2019:1234:abcd::/48 -s 56 --split')
         print(self.PROGNAME,
               '-i 2019:1234:abcd::/48 -o 2019:1234:abcd::/127 --pick-up')
-        print(self.PROGNAME, '-f input.txt --trans')
+        print(self.PROGNAME, '-f input.csv --trans')
         print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
     @cli.switch('-h')
@@ -78,8 +78,8 @@ class Ipv6Split(cli.Application):
     def __trans(self):
         with open(self.input_file, 'r') as f:
             for line in f:
-                _ip = IP(line)
-                self.outputs.append("{}\t{}".format(_ip[0], _ip[-1]))
+                _ip = IP(line.strip())
+                self.outputs.append("{},{}".format(_ip[0], _ip[-1]))
         self.__out()
 
     def __out(self):
@@ -89,7 +89,7 @@ class Ipv6Split(cli.Application):
             print(_result)
             exit(0)
         else:
-            fileName = 'result-{}.txt'.format(self.now())
+            fileName = 'result-{}.csv'.format(self.now())
             with open(fileName, 'w') as f:
                 f.write(_result)
             print('\n\n**拆分结果的文件名基于时间生成，不会覆盖旧文件**')
