@@ -9,6 +9,7 @@ verify_ssl = true
 ipy = "*"
 plumbum = "*"
 pyinstaller = "*"
+setuptools = "<45.0.0"
 
 [requires]
 python_version = "3.7"

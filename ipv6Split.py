@@ -14,10 +14,11 @@ class Ipv6Split(cli.Application):
     PROGNAME = 'ipv6Split'
     # PROGNAME = colors.green | 'ipv6Split'
     # PROGNAME = __file__
-    VERSION = '0.6.1'
+    VERSION = '0.8'
     # COLOR_GROUPS = {"Switches" : colors.bold & colors.yellow}
     outputs = []
     echo_to_cli = False   # 默认为输入到文件，而不是直接在命令行输入。
+    o_type = False  # 默认输出为压缩格式，而不是完整格式。
     # ip = '2019:1234:ABCD::/48'
     # suffix = 56
 
@@ -26,23 +27,26 @@ class Ipv6Split(cli.Application):
 
     def usage(self):
         '''显示使用样例'''
-        print(self.PROGNAME,)
-        print('================= verison: v{}\n'.format(self.VERSION))
+        print(self.PROGNAME,'v{}\n'.format(self.VERSION))
         print('功能1：' + self.split.__doc__)
         print('功能2：' + self.pick_up.__doc__)
         print('功能3：' + self.trans.__doc__)
-        print('\n用例：（使用 -h 查看更多帮助）\n')
+        print('\n使用示例：（使用 -h 查看详细）\n')
         print(self.PROGNAME, '-i 2019:1234:abcd::/48 -s 56 --split')
         print(self.PROGNAME,
               '-i 2019:1234:abcd::/48 -o 2019:1234:abcd::/127 --pick-up')
         print(self.PROGNAME, '-f input.csv --trans')
-        print('\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+        print('\n其他参数：（使用 -h 查看详细）\n')
+        print('--full、--cli')
+        print('\n~~~~ !!!双击直接运行仅可查看此帮助，使用功能请在命令行下运行!!!')
+        print('按回车键继续...')
 
     @cli.switch('-h')
     def help(self):
         '''显示帮助和使用样例'''
         # self.usage()
         super().help()
+        print('****仅运行', self.PROGNAME, '可查看使用示例（无 -h 参数）')
 
     def split_recursion(self, ip, suffix):
         '''递归法'''
@@ -60,54 +64,66 @@ class Ipv6Split(cli.Application):
         total = 2**self.index_mark
         result = self.split_recursion(self.ip, self.suffix)
         for i in result:
-            self.outputs.append(i.strCompressed())
-        self.__out()
-        print('拆分后个数 {} 。（个数=2的{}次幂）'.format(total, self.index_mark))
+            if self.o_type:
+                self.outputs.append(i.strFullsize())
+            else:
+                self.outputs.append(i.strCompressed())
+        tips = '拆分后个数 {} 。（个数=2的{}次幂）'.format(total, self.index_mark)
+        self.__out(tips)
 
     def __pick_up(self):
-        output_ip_mask = self.output_ip.strNetmask()[1:]
-        ip_mask = self.ip.strNetmask()[1:]
+        output_ip_mask = self.output_ip.prefixlen()
+        ip_mask = self.ip.prefixlen()
         total = int(output_ip_mask) - int(ip_mask) + 1
         result = self.ip - self.output_ip
-        self.outputs.append(self.output_ip.strCompressed())
-        for i in result:
-            self.outputs.append(i.strCompressed())
-        self.__out()
-        print('拆分后个数 {} 。（个数=掩码相减再+1）'.format(total))
+        if self.o_type:
+            self.outputs.append(self.output_ip.strFullsize())
+            for i in result:
+                self.outputs.append(i.strFullsize())
+        else:
+            self.outputs.append(self.output_ip.strCompressed())
+            for i in result:
+                self.outputs.append(i.strCompressed())
+        tips = '拆分后个数 {} 。（个数=掩码相减再+1）'.format(total)
+        self.__out(tips)
 
     def __trans(self):
         with open(self.input_file, 'r') as f:
             for line in f:
                 _ip = IP(line.strip())
-                self.outputs.append("{},{}".format(_ip[0], _ip[-1]))
+                if self.o_type:
+                    # self.outputs.append(_ip.strFullsize(3).replace('-', ','))
+                    self.outputs.append("{},{}".format(_ip[0].strFullsize(), _ip[-1].strFullsize()))
+                else:
+                    self.outputs.append("{},{}".format(_ip[0], _ip[-1]))
         self.__out()
 
-    def __out(self):
+    def __out(self, tips=""):
         '''结果输出'''
         _result = '\n'.join(self.outputs)
         if self.echo_to_cli:
             print(_result)
-            exit(0)
         else:
             fileName = 'result-{}.csv'.format(self.now())
             with open(fileName, 'w') as f:
                 f.write(_result)
             print('\n\n**拆分结果的文件名基于时间生成，不会覆盖旧文件**')
             print('文件保存在小工具运行目录：\n\t{}\n'.format(fileName))
+            print(tips)
 
     @cli.switch(names='-i', argtype=str)
     def input(self, input_ip):
-        '''原 IPv6 地址段'''
+        '''原 IP 地址段'''
         self.ip = IP(input_ip)
 
     @cli.switch('--split', requires=['-s'], excludes=['-o'])
     def split(self):
-        '''1.将 IPv6 地址拆分成掩码相同的 IPv6 地址段'''
+        '''功能1.将 IP 地址拆分成掩码相同的 IP 地址段'''
         self.method = self.__split
 
     @cli.switch('--pick-up', requires=['-o'], excludes=['-s'])
     def pick_up(self):
-        '''2.将指定的 IPv6 地址/段提取出来'''
+        '''功能2.将指定的 IP 地址/段提取出来'''
         self.method = self.__pick_up
 
     @cli.switch('-s', argtype=int, group=split.__doc__)
@@ -121,12 +137,12 @@ class Ipv6Split(cli.Application):
 
     @cli.switch('-o', argtype=str, group=pick_up.__doc__)
     def output(self, output_ip):
-        '''要提取的 IPv6 地址/段(配合 -i 参数)'''
+        '''要提取的 IP 地址/段(配合 -i 参数)'''
         self.output_ip = IP(output_ip)
 
     @cli.switch('--trans', requires=['-f'])
     def trans(self):
-        '''3.将若干IP/掩码格式转换成：起始IP,终止IP'''
+        '''功能3.将若干IP/掩码格式转换成：起始IP,终止IP'''
         self.method = self.__trans
 
     @cli.switch('-f', argtype=str, group=trans.__doc__)
@@ -134,7 +150,12 @@ class Ipv6Split(cli.Application):
         '''要转换的文件名(可由功能 1 或功能 2 生成)'''
         self.input_file = input_file_name
 
-    @cli.switch('--cli')
+    @cli.switch('--full', group='其他参数')
+    def output_type(self):
+        '''输出完整的 IP 地址'''
+        self.o_type = True
+
+    @cli.switch('--cli', group='其他参数')
     def echo_through_cli(self):
         '''直接在命令行打印结果'''
         self.echo_to_cli = True
@@ -144,12 +165,13 @@ class Ipv6Split(cli.Application):
             start_time = datetime.now()
             self.method()
             total_time = (datetime.now() - start_time).total_seconds()
-            print('\n>>> 拆分用时： {:4.2f} 秒'.format(total_time))
+            print('\n>>> 拆分用时： {:4.4f} 秒'.format(total_time))
         else:
             print('\n*********************************************')
             print('\t****欢迎使用 Xianda 小工具****')
             print('*********************************************\n')
             self.usage()
+            input()
 
 
 if __name__ == '__main__':
