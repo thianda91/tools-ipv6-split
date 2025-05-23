@@ -14,7 +14,7 @@ class Ipv6Split(cli.Application):
     PROGNAME = 'ipv6Split'
     # PROGNAME = colors.green | 'ipv6Split'
     # PROGNAME = __file__
-    VERSION = '0.8'
+    VERSION = '0.9'
     # COLOR_GROUPS = {"Switches" : colors.bold & colors.yellow}
     outputs = []
     echo_to_cli = False   # 默认为输入到文件，而不是直接在命令行输入。
@@ -28,9 +28,12 @@ class Ipv6Split(cli.Application):
     def usage(self):
         '''显示使用样例'''
         print(self.PROGNAME,'v{}\n'.format(self.VERSION))
-        print('功能1：' + self.split.__doc__)
-        print('功能2：' + self.pick_up.__doc__)
-        print('功能3：' + self.trans.__doc__)
+        fun1_doc = self.split.__doc__ if self.split.__doc__ else ""
+        fun2_doc = self.pick_up.__doc__ if self.pick_up.__doc__ else ""
+        fun3_doc = self.trans.__doc__ if self.trans.__doc__ else ""
+        print('功能1：' + fun1_doc)
+        print('功能2：' + fun2_doc)
+        print('功能3：' + fun3_doc)
         print('\n使用示例：（使用 -h 查看详细）\n')
         print(self.PROGNAME, '-i 2019:1234:abcd::/48 -s 56 --split')
         print(self.PROGNAME,
@@ -126,7 +129,7 @@ class Ipv6Split(cli.Application):
         '''功能2.将指定的 IP 地址/段提取出来'''
         self.method = self.__pick_up
 
-    @cli.switch('-s', argtype=int, group=split.__doc__)
+    @cli.switch('-s', argtype=int, group=split.__doc__ if split.__doc__ else "")
     def new_netmask(self, suffix):
         '''要拆分成的掩码(配合 -i 参数)'''
         self.index_mark = suffix - self.ip.prefixlen()
@@ -135,7 +138,7 @@ class Ipv6Split(cli.Application):
             return
         self.suffix = '/' + str(suffix)
 
-    @cli.switch('-o', argtype=str, group=pick_up.__doc__)
+    @cli.switch('-o', argtype=str, group=pick_up.__doc__ if pick_up.__doc__ else "")
     def output(self, output_ip):
         '''要提取的 IP 地址/段(配合 -i 参数)'''
         self.output_ip = IP(output_ip)
@@ -145,7 +148,7 @@ class Ipv6Split(cli.Application):
         '''功能3.将若干IP/掩码格式转换成：起始IP,终止IP'''
         self.method = self.__trans
 
-    @cli.switch('-f', argtype=str, group=trans.__doc__)
+    @cli.switch('-f', argtype=str, group=trans.__doc__ if trans.__doc__ else "")
     def file_in(self, input_file_name):
         '''要转换的文件名(可由功能 1 或功能 2 生成)'''
         self.input_file = input_file_name
@@ -160,18 +163,20 @@ class Ipv6Split(cli.Application):
         '''直接在命令行打印结果'''
         self.echo_to_cli = True
 
-    def main(self):
+    def main(self, *args, **kwargs):
         if hasattr(self, 'method'):
             start_time = datetime.now()
             self.method()
             total_time = (datetime.now() - start_time).total_seconds()
             print('\n>>> 拆分用时： {:4.4f} 秒'.format(total_time))
+            return 0
         else:
             print('\n*********************************************')
-            print('\t****欢迎使用 Xianda 小工具****')
+            print('****欢迎使用 Xianda 小工具****')
             print('*********************************************\n')
             self.usage()
             input()
+            return 0
 
 
 if __name__ == '__main__':

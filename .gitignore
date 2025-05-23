@@ -1,8 +1,6 @@
-.vscode
-demo/
-__pycache__
 build
 dist
 *.spec
-*.ini
-Pipfile.lock
+*.lock
+.venv
+.python-version
